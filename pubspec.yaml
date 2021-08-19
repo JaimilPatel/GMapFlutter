@@ -18,6 +18,7 @@ dependencies:
   connectivity_plus: ^1.0.7
   location: ^4.3.0
   permission_handler: ^8.1.4+2
+  flutter_svg: ^0.22.0
 
 dev_dependencies:
   flutter_test:
@@ -26,4 +27,5 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - style/
+    - assets/style/
+    - assets/marker/
