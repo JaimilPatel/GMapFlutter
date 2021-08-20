@@ -27,6 +27,7 @@ class _MapScreenState extends State<MapScreen> {
   late GoogleMapController _mapController;
   String _mapStyle = "";
   late BitmapDescriptor _pharmacyMarker;
+  late BitmapDescriptor _farPharmacyMarker;
   Set<Marker> _showMarkers = {};
   List<LatLng> _nearestPharmacies = [];
   int markerSizeMedium = Platform.isIOS ? 65 : 45;
@@ -60,6 +61,9 @@ class _MapScreenState extends State<MapScreen> {
     await _bitmapDescriptorFromSvgAsset(
             context, FileConstants.icPharmacyMarker, markerSizeMedium)
         .then((value) => _pharmacyMarker = value);
+    await _bitmapDescriptorFromSvgAsset(
+            context, FileConstants.icFarPharmacyMarker, markerSizeMedium)
+        .then((value) => _farPharmacyMarker = value);
   }
 
   Future<BitmapDescriptor> _bitmapDescriptorFromSvgAsset(
@@ -103,10 +107,21 @@ class _MapScreenState extends State<MapScreen> {
 
   void _setMarkerUi() {
     List<Marker> _generatedMapMarkers = [];
+    var i = 0;
     _nearestPharmacies.forEach((element) {
+      double dis = calculateDistance(
+          Provider.of<MapProvider>(context, listen: false)
+              .currentLatLng
+              ?.latitude,
+          Provider.of<MapProvider>(context, listen: false)
+              .currentLatLng
+              ?.longitude,
+          element.latitude,
+          element.longitude);
+      i++;
       _generatedMapMarkers.add(Marker(
           markerId: MarkerId(element.hashCode.toString()),
-          icon: _pharmacyMarker,
+          icon: dis < 0.6 ? _pharmacyMarker : _farPharmacyMarker,
           position: LatLng(element.latitude, element.longitude)));
     });
     setState(() {
@@ -172,8 +187,16 @@ class _MapScreenState extends State<MapScreen> {
               .updateCurrentLocation(
                   LatLng(position.target.latitude, position.target.longitude));
         },
-        onCameraIdle: () {},
       ),
     );
+  }
+
+  double calculateDistance(lat1, lon1, lat2, lon2) {
+    var p = 0.017453292519943295;
+    var c = cos;
+    var a = 0.5 -
+        c((lat2 - lat1) * p) / 2 +
+        c(lat1 * p) * c(lat2 * p) * (1 - c((lon2 - lon1) * p)) / 2;
+    return 12742 * asin(sqrt(a));
   }
 }
