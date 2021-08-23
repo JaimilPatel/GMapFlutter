@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gmap_flutter/providers/info_window_provider.dart';
 import 'package:gmap_flutter/providers/map_provider.dart';
 import 'package:gmap_flutter/ui/map_screen.dart';
 import 'package:provider/provider.dart';
@@ -18,6 +19,7 @@ class _MyAppState extends State<MyApp> {
     return MultiProvider(
       providers: [
         ListenableProvider(create: (_) => MapProvider()),
+        ListenableProvider(create: (_) => InfoWindowProvider()),
       ],
       child: MaterialApp(
         title: 'GMap Flutter',

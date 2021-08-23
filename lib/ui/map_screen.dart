@@ -10,13 +10,18 @@ import 'package:gmap_flutter/apis/api_manager.dart';
 import 'package:gmap_flutter/constants/api_constants.dart';
 import 'package:gmap_flutter/constants/file_constants.dart';
 import 'package:gmap_flutter/constants/key_constants.dart';
+import 'package:gmap_flutter/constants/space_constants.dart';
 import 'package:gmap_flutter/location/location_manager.dart';
 import 'package:gmap_flutter/model/error_model.dart';
+import 'package:gmap_flutter/providers/info_window_provider.dart';
 import 'package:gmap_flutter/providers/map_provider.dart';
 import 'package:gmap_flutter/utils/permission_utils.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
+
+import 'infowindow/model/pharmacy_details_model.dart';
+import 'infowindow/pharmacy_infowindow.dart';
 
 class MapScreen extends StatefulWidget {
   @override
@@ -31,17 +36,33 @@ class _MapScreenState extends State<MapScreen> {
   Set<Marker> _showMarkers = {};
   List<LatLng> _nearestPharmacies = [];
   int markerSizeMedium = Platform.isIOS ? 65 : 45;
+  PharmacyDetailsModel? _pharmacyDetailsModel;
+  List<PharmacyDetailsModel> _pharmacies = [];
+  GlobalKey? _keyGoogleMap = GlobalKey();
+  bool _isCameraReCenter = false;
+  bool _isShowInfoWindow = false;
 
   @override
   void initState() {
     super.initState();
     SchedulerBinding.instance?.addPostFrameCallback((_) {
       _initialiseMarkerBitmap(context);
+      Provider.of<InfoWindowProvider>(context, listen: false)
+          .updateWidth(MediaQuery.of(context).size.width);
+      Provider.of<InfoWindowProvider>(context, listen: false)
+          .updateHeight(_getMapHeight());
       rootBundle.loadString(FileConstants.mapStyle).then((string) {
         _mapStyle = string;
       });
       _getUserLocation(context);
     });
+  }
+
+  _getMapHeight() {
+    RenderBox? renderBoxRed =
+        _keyGoogleMap?.currentContext?.findRenderObject() as RenderBox?;
+    final size = renderBoxRed?.size;
+    return size?.height;
   }
 
   Future<void> _getUserLocation(BuildContext context) async {
@@ -95,9 +116,32 @@ class _MapScreenState extends State<MapScreen> {
               element[KeyConstants.geometryKey][KeyConstants.locationKey]
                       [KeyConstants.lngKey]
                   .toDouble()));
+          _pharmacies.add(PharmacyDetailsModel(
+              icon: element[KeyConstants.iconKey].toString(),
+              iconBackgroundColor:
+                  element[KeyConstants.iconBackgroundColorKey].toString(),
+              placeId: element[KeyConstants.placeIdKey].toString(),
+              name: element[KeyConstants.nameKey].toString(),
+              vicinity: element[KeyConstants.vicinityKey].toString(),
+              geometry: Geometry(
+                  location: Location(
+                      lat: element[KeyConstants.geometryKey]
+                          [KeyConstants.locationKey][KeyConstants.latKey],
+                      lng: element[KeyConstants.geometryKey]
+                          [KeyConstants.locationKey][KeyConstants.lngKey]),
+                  viewport: ViewPort(
+                      northeast: Location(lat: 0.0, lng: 0.0),
+                      southwest: Location(lat: 0.0, lng: 0.0))),
+              distance: 0.00,
+              rating: element[KeyConstants.ratingKey] != null
+                  ? element[KeyConstants.ratingKey].toDouble()
+                  : 0.00,
+              openingHours: element[KeyConstants.openingHoursKey] != null
+                  ? OpeningHours(openNow: element[KeyConstants.openingHoursKey][KeyConstants.openNowKey])
+                  : OpeningHours(openNow: false)));
         });
       });
-      _setMarkerUi();
+      _setMarkerUi(_pharmacies);
     }).catchError((e) {
       if (e is ErrorModel) {
         debugPrint("${e.response}");
@@ -105,10 +149,9 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
-  void _setMarkerUi() {
+  void _setMarkerUi(List<PharmacyDetailsModel> listOfPharmacy) {
     List<Marker> _generatedMapMarkers = [];
-    var i = 0;
-    _nearestPharmacies.forEach((element) {
+    listOfPharmacy.forEach((element) {
       double dis = calculateDistance(
           Provider.of<MapProvider>(context, listen: false)
               .currentLatLng
@@ -116,13 +159,30 @@ class _MapScreenState extends State<MapScreen> {
           Provider.of<MapProvider>(context, listen: false)
               .currentLatLng
               ?.longitude,
-          element.latitude,
-          element.longitude);
-      i++;
+          element.geometry.location.lat,
+          element.geometry.location.lng);
+      element.distance = dis;
       _generatedMapMarkers.add(Marker(
-          markerId: MarkerId(element.hashCode.toString()),
+          markerId: MarkerId("${element.placeId}"),
           icon: dis < 0.6 ? _pharmacyMarker : _farPharmacyMarker,
-          position: LatLng(element.latitude, element.longitude)));
+          position: LatLng(
+              element.geometry.location.lat, element.geometry.location.lng),
+          onTap: () {
+            LatLng latLng;
+            setState(() {
+              _isShowInfoWindow = true;
+              _pharmacyDetailsModel = element;
+              latLng = LatLng(
+                  element.geometry.location.lat, element.geometry.location.lng);
+              Provider.of<InfoWindowProvider>(context, listen: false)
+                  .updateVisibility(true);
+              _isCameraReCenter = true;
+              Provider.of<InfoWindowProvider>(context, listen: false)
+                  .updateInfoWindow(context, _mapController, latLng: latLng);
+              Provider.of<InfoWindowProvider>(context, listen: false)
+                  .rebuildInfoWindow();
+            });
+          }));
     });
     setState(() {
       _showMarkers.clear();
@@ -149,6 +209,19 @@ class _MapScreenState extends State<MapScreen> {
     return bounds;
   }
 
+  Future<void> _updateMarkers() async {
+    if (Provider.of<InfoWindowProvider>(context, listen: false)
+        .showInfoWindowData) {
+      Provider.of<InfoWindowProvider>(context, listen: false).updateInfoWindow(
+        context,
+        _mapController,
+      );
+      Provider.of<InfoWindowProvider>(context, listen: false)
+          .rebuildInfoWindow();
+      setState(() {});
+    }
+  }
+
   CameraPosition _getLocationTarget() {
     var initialCameraPosition;
     if (Provider.of<MapProvider>(context, listen: false).currentLatLng !=
@@ -171,24 +244,53 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
-    _getLocationTarget();
-    return Scaffold(
-      body: GoogleMap(
-        myLocationEnabled: true,
-        mapToolbarEnabled: true,
-        markers: _showMarkers,
-        initialCameraPosition: _getLocationTarget(),
-        onMapCreated: (GoogleMapController controller) {
-          _mapController = controller;
-          _mapController.setMapStyle(_mapStyle);
-        },
-        onCameraMove: (CameraPosition position) {
-          Provider.of<MapProvider>(context, listen: false)
-              .updateCurrentLocation(
-                  LatLng(position.target.latitude, position.target.longitude));
-        },
-      ),
-    );
+    SpaceConstants.getScreenSize(context);
+    return Scaffold(body: Consumer(builder: (context, _, __) {
+      return Stack(
+        children: [
+          GoogleMap(
+            myLocationEnabled: true,
+            mapToolbarEnabled: false,
+            key: _keyGoogleMap,
+            markers: _showMarkers,
+            initialCameraPosition: _getLocationTarget(),
+            onMapCreated: (GoogleMapController controller) {
+              _mapController = controller;
+              _mapController.setMapStyle(_mapStyle);
+            },
+            onCameraMove: (CameraPosition position) {
+              _updateMarkers();
+              Provider.of<MapProvider>(context, listen: false)
+                  .updateCurrentLocation(LatLng(
+                      position.target.latitude, position.target.longitude));
+            },
+            onCameraIdle: () {
+              setState(() {
+                _isCameraReCenter = false;
+              });
+            },
+            onTap: (LatLng latLng) {
+              if (Provider.of<InfoWindowProvider>(context, listen: false)
+                  .showInfoWindowData) {
+                Provider.of<InfoWindowProvider>(context, listen: false)
+                    .updateVisibility(false);
+                Provider.of<InfoWindowProvider>(context, listen: false)
+                    .rebuildInfoWindow();
+                setState(() {});
+              }
+            },
+          ),
+          if (Provider.of<InfoWindowProvider>(context, listen: false)
+              .showInfoWindowData)
+            Positioned(
+                left: Provider.of<InfoWindowProvider>(context, listen: false)
+                    .leftMarginData,
+                bottom: Provider.of<InfoWindowProvider>(context, listen: false)
+                    .bottomMarginData,
+                child: PharmacyInfoWindow(model: _pharmacyDetailsModel!))
+        ],
+      );
+    }));
   }
 
   double calculateDistance(lat1, lon1, lat2, lon2) {
