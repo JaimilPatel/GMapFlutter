@@ -1,7 +1,7 @@
 import 'dart:io';
-import 'dart:math';
 import 'dart:ui' as ui;
 
+import 'package:fluster/fluster.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -22,6 +22,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 
+import 'cluster/map_helper.dart';
+import 'cluster/map_marker.dart';
 import 'infowindow/model/pharmacy_details_model.dart';
 import 'infowindow/pharmacy_infowindow.dart';
 
@@ -42,6 +44,10 @@ class _MapScreenState extends State<MapScreen> {
   List<PharmacyDetailsModel> _pharmacies = [];
   GlobalKey? _keyGoogleMap = GlobalKey();
   bool _isCameraReCenter = false;
+  int _minClusterZoom = 0;
+  int _maxClusterZoom = 19;
+  late Fluster<MapMarker> _clusterManager;
+  double _currentZoom = 0;
 
   @override
   void initState() {
@@ -156,8 +162,8 @@ class _MapScreenState extends State<MapScreen> {
     });
   }
 
-  void _setMarkerUi(List<PharmacyDetailsModel> listOfPharmacy) {
-    List<Marker> _generatedMapMarkers = [];
+  void _setMarkerUi(List<PharmacyDetailsModel> listOfPharmacy) async {
+    List<MapMarker> _generatedMapMarkers = [];
     listOfPharmacy.forEach((element) {
       double dis = calculateDistance(
           Provider.of<MapProvider>(context, listen: false)
@@ -169,12 +175,12 @@ class _MapScreenState extends State<MapScreen> {
           element.geometry.location.lat,
           element.geometry.location.lng);
       element.distance = dis;
-      _generatedMapMarkers.add(Marker(
-          markerId: MarkerId("${element.placeId}"),
+      _generatedMapMarkers.add(MapMarker(
+          id: element.placeId,
           icon: dis < 0.6 ? _pharmacyMarker : _farPharmacyMarker,
           position: LatLng(
               element.geometry.location.lat, element.geometry.location.lng),
-          onTap: () {
+          onMarkerTap: () {
             LatLng latLng;
             setState(() {
               _pharmacyDetailsModel = element;
@@ -190,33 +196,17 @@ class _MapScreenState extends State<MapScreen> {
             });
           }));
     });
-    setState(() {
-      _showMarkers.clear();
-      _showMarkers.addAll(_generatedMapMarkers);
-    });
-    _mapController.animateCamera(
-        CameraUpdate.newLatLngBounds(_getBounds(_nearestPharmacies), 50));
-  }
-
-  LatLngBounds _getBounds(List<LatLng> markerLocations) {
-    var lngs = markerLocations.map<double>((m) => m.longitude).toList();
-    var lats = markerLocations.map<double>((m) => m.latitude).toList();
-
-    var topMost = lngs.reduce(max);
-    var leftMost = lats.reduce(min);
-    var rightMost = lats.reduce(max);
-    var bottomMost = lngs.reduce(min);
-
-    var bounds = LatLngBounds(
-      northeast: LatLng(rightMost, topMost),
-      southwest: LatLng(leftMost, bottomMost),
+    _clusterManager = await MapHelper.initClusterManager(
+      _generatedMapMarkers,
+      _minClusterZoom,
+      _maxClusterZoom,
     );
-
-    return bounds;
+    await _updateInfoWindowsWithMarkers(InfoWindowProvider());
   }
 
   Future<void> _updateInfoWindowsWithMarkers(
-      InfoWindowProvider infoWindowProvider) async {
+      InfoWindowProvider infoWindowProvider,
+      [CameraPosition? updatedPosition]) async {
     if (infoWindowProvider.showInfoWindowData) {
       infoWindowProvider.updateInfoWindow(
         context,
@@ -224,6 +214,28 @@ class _MapScreenState extends State<MapScreen> {
       );
       infoWindowProvider.rebuildInfoWindow();
     }
+    if (updatedPosition != null) {
+      if (updatedPosition.zoom == _currentZoom) {
+        return;
+      }
+      _currentZoom = updatedPosition.zoom;
+    }
+    final updatedMarkers = await MapHelper.getClusterMarkers(
+        _mapController,
+        _clusterManager,
+        _currentZoom,
+        Color(0xff34B559),
+        Colors.white,
+        Platform.isAndroid
+            ? (SpaceConstants.screenSize.width * 0.15).toInt()
+            : (SpaceConstants.screenSize.width * 0.22).toInt(), () {
+      _isCameraReCenter = true;
+    });
+    setState(() {
+      _showMarkers
+        ..clear()
+        ..addAll(updatedMarkers);
+    });
   }
 
   CameraPosition _getLocationTarget() {
@@ -264,7 +276,7 @@ class _MapScreenState extends State<MapScreen> {
               _mapController.setMapStyle(_mapStyle);
             },
             onCameraMove: (CameraPosition position) {
-              _updateInfoWindowsWithMarkers(infoWindowProvider);
+              _updateInfoWindowsWithMarkers(infoWindowProvider, position);
               Provider.of<MapProvider>(context, listen: false)
                   .updateCurrentLocation(LatLng(
                       position.target.latitude, position.target.longitude));
