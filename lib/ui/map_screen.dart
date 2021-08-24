@@ -40,7 +40,6 @@ class _MapScreenState extends State<MapScreen> {
   List<PharmacyDetailsModel> _pharmacies = [];
   GlobalKey? _keyGoogleMap = GlobalKey();
   bool _isCameraReCenter = false;
-  bool _isShowInfoWindow = false;
 
   @override
   void initState() {
@@ -170,7 +169,6 @@ class _MapScreenState extends State<MapScreen> {
           onTap: () {
             LatLng latLng;
             setState(() {
-              _isShowInfoWindow = true;
               _pharmacyDetailsModel = element;
               latLng = LatLng(
                   element.geometry.location.lat, element.geometry.location.lng);
@@ -209,16 +207,14 @@ class _MapScreenState extends State<MapScreen> {
     return bounds;
   }
 
-  Future<void> _updateMarkers() async {
-    if (Provider.of<InfoWindowProvider>(context, listen: false)
-        .showInfoWindowData) {
-      Provider.of<InfoWindowProvider>(context, listen: false).updateInfoWindow(
+  Future<void> _updateInfoWindowsWithMarkers(
+      InfoWindowProvider infoWindowProvider) async {
+    if (infoWindowProvider.showInfoWindowData) {
+      infoWindowProvider.updateInfoWindow(
         context,
         _mapController,
       );
-      Provider.of<InfoWindowProvider>(context, listen: false)
-          .rebuildInfoWindow();
-      setState(() {});
+      infoWindowProvider.rebuildInfoWindow();
     }
   }
 
@@ -245,7 +241,8 @@ class _MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     SpaceConstants.getScreenSize(context);
-    return Scaffold(body: Consumer(builder: (context, _, __) {
+    return Scaffold(body: Consumer<InfoWindowProvider>(
+        builder: (context, infoWindowProvider, __) {
       return Stack(
         children: [
           GoogleMap(
@@ -259,7 +256,7 @@ class _MapScreenState extends State<MapScreen> {
               _mapController.setMapStyle(_mapStyle);
             },
             onCameraMove: (CameraPosition position) {
-              _updateMarkers();
+              _updateInfoWindowsWithMarkers(infoWindowProvider);
               Provider.of<MapProvider>(context, listen: false)
                   .updateCurrentLocation(LatLng(
                       position.target.latitude, position.target.longitude));
@@ -270,23 +267,16 @@ class _MapScreenState extends State<MapScreen> {
               });
             },
             onTap: (LatLng latLng) {
-              if (Provider.of<InfoWindowProvider>(context, listen: false)
-                  .showInfoWindowData) {
-                Provider.of<InfoWindowProvider>(context, listen: false)
-                    .updateVisibility(false);
-                Provider.of<InfoWindowProvider>(context, listen: false)
-                    .rebuildInfoWindow();
-                setState(() {});
+              if (infoWindowProvider.showInfoWindowData) {
+                infoWindowProvider.updateVisibility(false);
+                infoWindowProvider.rebuildInfoWindow();
               }
             },
           ),
-          if (Provider.of<InfoWindowProvider>(context, listen: false)
-              .showInfoWindowData)
+          if (infoWindowProvider.showInfoWindowData)
             Positioned(
-                left: Provider.of<InfoWindowProvider>(context, listen: false)
-                    .leftMarginData,
-                bottom: Provider.of<InfoWindowProvider>(context, listen: false)
-                    .bottomMarginData,
+                left: infoWindowProvider.leftMarginData,
+                bottom: infoWindowProvider.bottomMarginData,
                 child: PharmacyInfoWindow(model: _pharmacyDetailsModel!))
         ],
       );

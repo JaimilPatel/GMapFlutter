@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-class DrawTriangleShape extends CustomPainter {
+class TriangleAnchorShape extends CustomPainter {
   Paint? painter;
 
-  DrawTriangleShape() {
+  TriangleAnchorShape() {
     painter = Paint()
       ..color = Colors.white
       ..shader

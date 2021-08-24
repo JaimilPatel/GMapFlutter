@@ -1,12 +1,10 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:gmap_flutter/constants/file_constants.dart';
 import 'package:gmap_flutter/constants/fontsize_constants.dart';
 import 'package:gmap_flutter/constants/size_constants.dart';
 import 'package:gmap_flutter/constants/space_constants.dart';
 import 'package:gmap_flutter/ui/widgets/pharmacy_rating_widget.dart';
-import 'package:gmap_flutter/ui/widgets/triangle_shape.dart';
+import 'package:gmap_flutter/ui/widgets/triangle_anchor_shape.dart';
 
 import 'model/pharmacy_details_model.dart';
 
@@ -32,7 +30,7 @@ class _PharmacyInfoWindowState extends State<PharmacyInfoWindow> {
               decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.all(
-                      Radius.circular(SpaceConstants.screenSize.width / 5)),
+                      Radius.circular(SpaceConstants.screenSize.width / 7)),
                   boxShadow: [
                     BoxShadow(
                         color: widget.model.openingHours.openNow
@@ -43,19 +41,11 @@ class _PharmacyInfoWindowState extends State<PharmacyInfoWindow> {
                         offset: Offset(0, 0))
                   ]),
               child: ClipRRect(
-                  borderRadius: BorderRadius.all(
-                      Radius.circular(SpaceConstants.screenSize.width / 5)),
-                  child: CachedNetworkImage(
-                      fit: BoxFit.cover,
-                      width: SizeConstants.size125,
-                      height: SizeConstants.size125,
-                      placeholder: (context, url) => Center(
-                          child: SizedBox(
-                              height: SizeConstants.size35,
-                              width: SizeConstants.size35,
-                              child: CircularProgressIndicator(
-                                  backgroundColor: Colors.blue))),
-                      imageUrl: widget.model.icon)),
+                  child: CircleAvatar(
+                radius: SpaceConstants.screenSize.width / 7,
+                backgroundImage:
+                    AssetImage(FileConstants.icPharmacyPlaceHolder),
+              )),
             ),
             SizedBox(height: SpaceConstants.spacing15),
             Card(
@@ -73,27 +63,21 @@ class _PharmacyInfoWindowState extends State<PharmacyInfoWindow> {
                                   fontWeight: FontSizeConstants.fontWeightBold,
                                   fontSize: FontSizeConstants.fontSize14,
                                   color: Colors.blue))),
-                      CommonRatingWidget(
+                      PharmacyRatingWidget(
                           onRatingTap: () {}, initRating: widget.model.rating),
                       Padding(
                           padding: const EdgeInsets.symmetric(
                               vertical: SpaceConstants.spacing10,
                               horizontal: SpaceConstants.spacing10),
-                          child: Row(children: <Widget>[
-                            SvgPicture.asset(FileConstants.icLocation,
-                                color: Colors.blue),
-                            SizedBox(width: SpaceConstants.spacing10),
-                            Expanded(
-                                child: Text(widget.model.vicinity,
-                                    style: TextStyle(
-                                      fontWeight:
-                                          FontSizeConstants.fontWeightSemiBold,
-                                      fontSize: FontSizeConstants.fontSize12,
-                                    )))
-                          ]))
+                          child: Text(widget.model.vicinity,
+                              style: TextStyle(
+                                fontWeight:
+                                    FontSizeConstants.fontWeightSemiBold,
+                                fontSize: FontSizeConstants.fontSize12,
+                              )))
                     ])),
             CustomPaint(
-                painter: DrawTriangleShape(),
+                painter: TriangleAnchorShape(),
                 child: Container(
                     width: SizeConstants.size25, height: SizeConstants.size30))
           ])),

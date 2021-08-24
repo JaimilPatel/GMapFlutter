@@ -4,16 +4,16 @@ import 'package:flutter_svg/svg.dart';
 import 'package:gmap_flutter/constants/file_constants.dart';
 import 'package:gmap_flutter/constants/space_constants.dart';
 
-class CommonRatingWidget extends StatefulWidget {
+class PharmacyRatingWidget extends StatefulWidget {
   final double initRating;
   final Function onRatingTap;
-  CommonRatingWidget({this.initRating = 0.0, required this.onRatingTap});
+  PharmacyRatingWidget({this.initRating = 0.0, required this.onRatingTap});
 
   @override
-  _CommonRatingWidgetState createState() => _CommonRatingWidgetState();
+  _PharmacyRatingWidgetState createState() => _PharmacyRatingWidgetState();
 }
 
-class _CommonRatingWidgetState extends State<CommonRatingWidget> {
+class _PharmacyRatingWidgetState extends State<PharmacyRatingWidget> {
   @override
   Widget build(BuildContext context) {
     return RatingBar(

@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:gmap_flutter/constants/file_constants.dart';
 import 'package:gmap_flutter/constants/size_constants.dart';
 import 'package:gmap_flutter/constants/space_constants.dart';
 
@@ -24,6 +25,9 @@ class SquareImage extends StatelessWidget {
                           width: SizeConstants.size35,
                           child: CircularProgressIndicator(
                               backgroundColor: Colors.blue))),
+                  errorWidget: (context, url, error) => Image.asset(
+                        FileConstants.icPharmacyPlaceHolder,
+                      ),
                   imageUrl: image)
             ])));
   }

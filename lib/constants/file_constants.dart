@@ -6,4 +6,6 @@ class FileConstants {
   static const String icFilledStar = "assets/marker/ic_filled_star.svg";
   static const String icEmptyStar = "assets/marker/ic_empty_star.svg";
   static const String icLocation = "assets/marker/ic_location.svg";
+  static const String icPharmacyPlaceHolder =
+      "assets/placeholder/ic_pharmacy_placeholder.png";
 }
