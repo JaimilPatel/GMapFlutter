@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:gmap_flutter/apis/api_manager.dart';
 import 'package:gmap_flutter/constants/api_constants.dart';
 import 'package:gmap_flutter/constants/file_constants.dart';
@@ -16,6 +17,7 @@ import 'package:gmap_flutter/model/error_model.dart';
 import 'package:gmap_flutter/providers/info_window_provider.dart';
 import 'package:gmap_flutter/providers/map_provider.dart';
 import 'package:gmap_flutter/utils/permission_utils.dart';
+import 'package:gmap_flutter/utils/reusable_methods.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
@@ -69,7 +71,12 @@ class _MapScreenState extends State<MapScreen> {
         isOpenSettings: true, permissionGrant: () async {
       await LocationService().fetchCurrentLocation(context, _getPharmacyList,
           updatePosition: updateCameraPosition);
-    }, permissionDenied: () async {});
+    }, permissionDenied: () {
+      Fluttertoast.showToast(
+          backgroundColor: Colors.blue,
+          msg:
+              "Please grant the required permission from settings to access this feature.");
+    });
   }
 
   void updateCameraPosition(CameraPosition cameraPosition) {
@@ -107,6 +114,7 @@ class _MapScreenState extends State<MapScreen> {
         .then((value) {
       setState(() {
         _nearestPharmacies.clear();
+        _pharmacies.clear();
         value.data[KeyConstants.resultsKey].forEach((element) {
           _nearestPharmacies.add(LatLng(
               element[KeyConstants.geometryKey][KeyConstants.locationKey]
@@ -281,14 +289,5 @@ class _MapScreenState extends State<MapScreen> {
         ],
       );
     }));
-  }
-
-  double calculateDistance(lat1, lon1, lat2, lon2) {
-    var p = 0.017453292519943295;
-    var c = cos;
-    var a = 0.5 -
-        c((lat2 - lat1) * p) / 2 +
-        c(lat1 * p) * c(lat2 * p) * (1 - c((lon2 - lon1) * p)) / 2;
-    return 12742 * asin(sqrt(a));
   }
 }
