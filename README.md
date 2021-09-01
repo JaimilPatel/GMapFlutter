@@ -1,6 +1,6 @@
-# Customised Google Map In Flutter.
-<b>Let's develop customised google map for best user experience.</b><br> 
-<b>Visit :</b> https://medium.com/@jaimil.dev8819/customised-google-map-in-flutter-50ec8c69eba1
+# How To Integrate Customized Google Map in Flutter
+<b>Let’s develop a customised Google Maps for the best user experience.</b><br> 
+<b>Visit :</b> https://medium.com/flutter-community/how-to-integrate-customized-google-map-in-flutter-50ec8c69eba1
 
 <b>You can see whole implementation in below images & videos.</b>
 
