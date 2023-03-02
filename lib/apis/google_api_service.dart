@@ -19,8 +19,8 @@ class GoogleApiService {
 
   Dio initApiServiceDio() {
     final baseOption = BaseOptions(
-      connectTimeout: 45 * 1000,
-      receiveTimeout: 45 * 1000,
+      connectTimeout: Duration(seconds: 45 * 1000),
+      receiveTimeout: Duration(seconds: 45 * 1000),
       baseUrl: 'https://maps.googleapis.com/maps/api/place/',
       contentType: 'application/json',
     );
@@ -68,7 +68,7 @@ class GoogleApiService {
         options: options,
       ));
     } on DioError catch (e) {
-      if (e.type == DioErrorType.connectTimeout) {
+      if (e.type == DioErrorType.connectionTimeout) {
         return Future.error("Poor internet connection");
       }
       rethrow;
